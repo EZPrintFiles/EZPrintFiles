@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Print Request — EZ Overflow</title>
+<style>
+  :root{
+    --navy: #0c2d55;
+    --navy-deep: #081d38;
+    --gold: #c9973f;
+    --gold-light: #e0b566;
+    --ink: #1a1f29;
+    --muted: #5b6472;
+    --line: #e3e2dd;
+    --paper: #fbfaf7;
+    --card: #ffffff;
+    --black: #0a0a0a;
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--paper);
+    font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+    color: var(--ink);
+  }
+  .wrap{ max-width: 680px; margin: 0 auto; padding: 0 0 4rem; }
+
+  /* ---- Header, matching the survey site ---- */
+  .brand-bar{ background: var(--navy); text-align:center; padding: 14px 20px; }
+  .brand-bar span{ color:#fff; font-size: 20px; font-weight: 700; letter-spacing: 0.03em; }
+  .hero{ background: var(--black); text-align:center; padding: 28px 20px 32px; }
+  .hero img{ max-width: 320px; width: 80%; height: auto; }
+  .tagline{ background: var(--navy); text-align:center; padding: 12px 20px 16px; }
+  .tagline p{ margin:0; color:#fff; font-size: 14px; font-weight:600; letter-spacing:0.02em; }
+  .tagline p.sub{ font-weight: 400; opacity: 0.85; font-size: 13px; margin-top: 4px; }
+
+  /* ---- Footer ---- */
+  .site-footer{
+    background: var(--navy-deep); color: #fff; text-align:center;
+    padding: 28px 20px 30px; margin-top: 30px; font-size: 13px; line-height: 1.9;
+  }
+  .site-footer .footer-name{
+    color: var(--gold-light); font-weight: 700; font-size: 15px;
+    letter-spacing: 0.03em; margin-bottom: 6px; text-transform: uppercase;
+  }
+  .site-footer a{ color: #fff; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }
+  .site-footer a:hover{ border-bottom-color: var(--gold-light); }
+  .site-footer .footer-divider{
+    width: 40px; height: 2px; background: var(--gold); margin: 14px auto 14px; border: none;
+  }
+
+  /* ---- Section pill ---- */
+  .pill{
+    display:inline-block; background: var(--navy); color:#fff;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 6px 18px; border-radius: 999px; margin-bottom: 18px;
+  }
+
+  form{ padding: 8px 20px 0; }
+
+  .section{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 24px 22px;
+    margin-top: 20px;
+  }
+
+  .field{ margin-bottom: 16px; }
+  .field label{
+    display:block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px;
+  }
+  .field label .req{ color: var(--gold); margin-left:2px; }
+  .hint{ font-size: 12px; color: var(--muted); margin-bottom: 6px; margin-top: -2px; }
+
+  input[type="text"], input[type="email"], input[type="tel"], input[type="number"],
+  input[type="date"], input[type="password"], textarea, select{
+    width:100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff;
+  }
+  input:focus, textarea:focus, select:focus{
+    outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(12,45,85,0.1);
+  }
+  textarea{ resize: vertical; min-height: 60px; }
+
+  /* two-column rows, matching the survey site, collapsing under 480px */
+  .row-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 480px){ .row-2{ grid-template-columns: 1fr; } }
+
+  .choice-group{ display:flex; flex-direction:column; gap:9px; }
+  .choice-group.grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  @media (max-width: 480px){ .choice-group.grid-2{ grid-template-columns: 1fr; } }
+  .choice{ display:flex; align-items:flex-start; gap: 9px; font-size: 14px; color: var(--ink); cursor:pointer; }
+  .choice input{ margin-top: 3px; accent-color: var(--navy); width:15px; height:15px; flex-shrink:0; }
+
+  .boundary-note{
+    background: #f4f6f8; border-left: 3px solid var(--navy); border-radius: 0 6px 6px 0;
+    padding: 12px 14px; font-size: 13px; color: var(--muted); line-height: 1.6; margin: 10px 0 18px;
+  }
+  .boundary-note.gold{ border-left-color: var(--gold); }
+
+  .hidden{ display:none; }
+
+  .btn{
+    font-family: inherit; font-size: 15px; font-weight: 600; padding: 12px 28px;
+    border-radius: 7px; cursor:pointer; border: none; background: var(--navy); color:#fff;
+  }
+  .btn:hover{ background: var(--navy-deep); }
+
+  .status-msg{ text-align:center; font-size: 13px; color: var(--muted); margin-top: 14px; min-height: 18px; }
+  .status-msg.error{ color: #b00020; }
+  .status-msg.success{ color: #1a7d1a; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="brand-bar"><span>Print Request</span></div>
+  <div class="hero">
+    <img src="ez-overflow-logo.png" alt="EZ Overflow — B2B Printing Partner">
+  </div>
+  <div class="tagline">
+    <p>EZ Overflow — Print Services</p>
+    <p class="sub">Submit a job, or send us sample files as a prospective customer</p>
+  </div>
+
+  <form id="intakeForm">
+
+    <!-- ACCESS + REQUEST TYPE -->
+    <div class="section">
+      <span class="pill">Get Started</span>
+      <div class="row-2">
+        <div class="field">
+          <label>Access Password<span class="req">*</span></label>
+          <div class="hint">Provided to you by EZ Overflow</div>
+          <input type="password" id="password" required>
+        </div>
+        <div class="field">
+          <label>Production or Samples?<span class="req">*</span></label>
+          <div class="choice-group">
+            <label class="choice"><input type="radio" name="submissionType" value="Print Job — Full Order" checked> Production Printing Request</label>
+            <label class="choice"><input type="radio" name="submissionType" value="Sample Files — Prospective Customer"> Sample Files (for a specific printer)</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT (always shown) -->
+    <div class="section">
+      <span class="pill">Contact Info</span>
+      <div class="row-2">
+        <div class="field">
+          <label>Company Name<span class="req">*</span></label>
+          <input type="text" id="companyName" required>
+        </div>
+        <div class="field">
+          <label>Contact Name<span class="req">*</span></label>
+          <input type="text" id="contactName" required>
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Contact Email<span class="req">*</span></label>
+          <input type="email" id="contactEmail" required>
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="phone">
+        </div>
+      </div>
+    </div>
+
+    <!-- SAMPLE PATH ONLY -->
+    <div class="section hidden" id="sampleSection">
+      <span class="pill">Sample Details</span>
+      <div class="field">
+        <label>Which equipment is this for?</label>
+        <div class="hint">Optional</div>
+        <select id="equipment">
+          <option value="">-- select --</option>
+          <option>BP-1200S</option>
+          <option>AstroNova AJ800</option>
+          <option>DGI Presto</option>
+          <option>Riso MH9450</option>
+          <option>Riso GL</option>
+          <option>Not sure</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>File Upload</label>
+        <input type="file" id="sampleFile">
+      </div>
+      <div class="field">
+        <label>Sending a physical paper sample too?</label>
+        <select id="sendingPaperSampleShort">
+          <option value="No">No</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </div>
+      <div id="mailNoticeShort" class="boundary-note gold hidden">
+        Mail your physical sample to: EZ-HiTech, Attn: EZ Overflow, 1140 US 22 West, Mountainside, NJ 07092. Write your job number on the package once you receive it after submitting.
+      </div>
+      <div id="sampleStockBlock" class="hidden">
+        <div class="hint" style="margin-top:14px;">Tell us about the paper stock so we print your test correctly</div>
+        <div class="row-2">
+          <div class="field">
+            <label>Brand / Mill</label>
+            <input type="text" id="stockBrandSample">
+          </div>
+          <div class="field">
+            <label>Weight</label>
+            <input type="text" id="stockWeightSample" placeholder="e.g. 80lb text, 120gsm">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Size</label>
+            <input type="text" id="stockSizeSample">
+          </div>
+          <div class="field">
+            <label>Color</label>
+            <input type="text" id="stockColorSample">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Stock Type</label>
+            <select id="stockTypeSample">
+              <option>Bond</option>
+              <option>Text</option>
+              <option>Cover</option>
+              <option>Index</option>
+              <option>Synthetic</option>
+              <option>Specialty (please describe)</option>
+              <option>Not Sure</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Grain Direction</label>
+            <select id="grainDirectionSample">
+              <option>Grain Long</option>
+              <option>Grain Short</option>
+              <option>Not Sure</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Coated or Uncoated?</label>
+          <select id="coatedSample">
+            <option>Uncoated</option>
+            <option>Coated</option>
+            <option>Not Sure</option>
+          </select>
+        </div>
+        <div class="boundary-note gold">
+          If this sample is for the AstroNova AJ800 or DGI Presto, note: we can't print on coated stock with inkjet unless it's been pre-treated — which we don't currently offer. If you're not sure, mark "Not Sure" above and we'll follow up.
+        </div>
+        <div class="field">
+          <label>Full Description</label>
+          <textarea id="stockDescriptionSample"></textarea>
+        </div>
+      </div>
+      <div id="sampleMediaPreference" class="field">
+        <label>What would you like this printed on?</label>
+        <div class="hint">Since you're not sending physical stock, briefly describe what you'd like used — e.g. "your standard white cover stock," "something with a metallic finish," or "no preference, your recommendation"</div>
+        <textarea id="mediaPreference"></textarea>
+      </div>
+    </div>
+
+    <!-- FULL ORDER PATH -->
+    <div id="fullOrderSections">
+
+      <div class="section">
+        <span class="pill">Job Details</span>
+        <div class="field">
+          <label>Job Name / Description</label>
+          <input type="text" id="jobName">
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Quantity</label>
+            <input type="number" id="quantity" min="1">
+          </div>
+          <div class="field">
+            <label>Sides</label>
+            <select id="sides">
+              <option>Single-sided</option>
+              <option>Double-sided</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Finished Size</label>
+          <select id="finishedSize">
+            <option>8.5" x 11"</option>
+            <option>8.5" x 14"</option>
+            <option>11" x 17"</option>
+            <option>12" x 18"</option>
+            <option>13" x 19"</option>
+            <option>Larger — please inquire</option>
+          </select>
+        </div>
+        <div class="boundary-note">
+          Need something bigger than 13" x 19"? Contact us before submitting so we can confirm we can accommodate it.
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="pill">Stock Specification</span>
+        <div class="hint">Customer-supplied — EZ Overflow doesn't keep house stock on hand</div>
+        <div class="row-2">
+          <div class="field">
+            <label>Brand / Mill</label>
+            <input type="text" id="stockBrand">
+          </div>
+          <div class="field">
+            <label>Weight</label>
+            <input type="text" id="stockWeight" placeholder="e.g. 80lb text, 120gsm">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Size</label>
+            <input type="text" id="stockSize">
+          </div>
+          <div class="field">
+            <label>Color</label>
+            <input type="text" id="stockColor">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Stock Type</label>
+            <select id="stockType">
+              <option>Bond</option>
+              <option>Text</option>
+              <option>Cover</option>
+              <option>Index</option>
+              <option>Synthetic</option>
+              <option>Specialty (please describe)</option>
+              <option>Not Sure</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Grain Direction</label>
+            <select id="grainDirection">
+              <option>Grain Long</option>
+              <option>Grain Short</option>
+              <option>Not Sure</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Coated or Uncoated?</label>
+          <select id="coated">
+            <option>Uncoated</option>
+            <option>Coated</option>
+            <option>Not Sure</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Full Description</label>
+          <textarea id="stockDescription"></textarea>
+        </div>
+        <div class="field">
+          <label>Sending a physical paper sample?</label>
+          <select id="sendingPaperSample">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+        <div id="mailNoticeFull" class="boundary-note gold hidden">
+          Mail your physical sample to: EZ-HiTech, Attn: EZ Overflow, 1140 US 22 West, Mountainside, NJ 07092. Write your job number on the package once you receive it after submitting.
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="pill">Color &amp; Finishing</span>
+        <div class="row-2">
+          <div class="field">
+            <label>Color Mode</label>
+            <select id="colorMode">
+              <option>Full Color CMYK</option>
+              <option>Black & White</option>
+              <option>CMYK + Specialty</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Finishing</label>
+            <select id="finishing">
+              <option>None</option>
+              <option>Staple (corner/side)</option>
+              <option>Booklet / Saddle-Stitch</option>
+              <option>Crease</option>
+              <option>Square Back Fold</option>
+              <option>Standard Fold</option>
+            </select>
+          </div>
+        </div>
+        <div id="specialtyBlock" class="field hidden">
+          <label>Describe the specialty effect you'd like</label>
+          <div class="hint">e.g. silver logo, white underprint on dark stock</div>
+          <textarea id="specialtyDescription"></textarea>
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="pill">Timing</span>
+        <div class="row-2">
+          <div class="field">
+            <label>Proof Required?</label>
+            <select id="proofRequired">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Needed By</label>
+            <input type="date" id="neededBy">
+          </div>
+        </div>
+        <div id="proofNote" class="boundary-note hidden">
+          Want a proof first? Just build a day or two extra into your Needed By date — we'll pause for your sign-off before printing starts.
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="pill">Files</span>
+        <div class="field">
+          <label>File Upload</label>
+          <input type="file" id="fullFile">
+        </div>
+        <div class="field">
+          <label>What does this file cover?</label>
+          <div class="hint">Optional</div>
+          <input type="text" id="fileNote">
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="pill">Notes</span>
+        <div class="field">
+          <textarea id="additionalNotes" rows="3"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center; margin-top:24px;">
+      <button type="submit" class="btn">Submit</button>
+    </div>
+    <div id="statusMsg" class="status-msg"></div>
+
+  </form>
+
+  <div class="site-footer">
+    <div class="footer-name">EZ Hi-Tech Services</div>
+    <div>1140 US 22 West, Mountainside, NJ 07092</div>
+    <hr class="footer-divider">
+    <div>Toll Free: <a href="tel:8002072175">(800) 207-2175</a></div>
+    <div>Tel: <a href="tel:9083178203">(908) 317-8203</a></div>
+    <div>Email: <a href="mailto:info@ezhitech.com">info@ezhitech.com</a></div>
+    <div style="margin-top:6px; opacity:0.8;">Hours: M–F, 8:00 am – 5:00 pm</div>
+  </div>
+
+</div>
+
+<script>
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyfRTMINvkI5gPhK3JmoIUEW5floQoM9iffFi9OGr_yhKT_i2BKjG_plzbTlRLtLm1hzA/exec';
+
+const radios = document.getElementsByName('submissionType');
+radios.forEach(r => r.addEventListener('change', updateVisibility));
+function updateVisibility() {
+  const isSample = document.querySelector('input[name=submissionType]:checked').value.indexOf('Sample') === 0;
+  document.getElementById('sampleSection').classList.toggle('hidden', !isSample);
+  document.getElementById('fullOrderSections').classList.toggle('hidden', isSample);
+}
+updateVisibility();
+
+document.getElementById('colorMode').addEventListener('change', function () {
+  document.getElementById('specialtyBlock').classList.toggle('hidden', this.value !== 'CMYK + Specialty');
+});
+
+document.getElementById('proofRequired').addEventListener('change', function () {
+  document.getElementById('proofNote').classList.toggle('hidden', this.value !== 'Yes');
+});
+
+document.getElementById('sendingPaperSample').addEventListener('change', function () {
+  document.getElementById('mailNoticeFull').classList.toggle('hidden', this.value !== 'Yes');
+});
+document.getElementById('sendingPaperSampleShort').addEventListener('change', function () {
+  const sendingSample = this.value === 'Yes';
+  document.getElementById('mailNoticeShort').classList.toggle('hidden', !sendingSample);
+  document.getElementById('sampleStockBlock').classList.toggle('hidden', !sendingSample);
+  document.getElementById('sampleMediaPreference').classList.toggle('hidden', sendingSample);
+});
+
+function fileToBase64(fileInput) {
+  return new Promise((resolve) => {
+    const file = fileInput.files[0];
+    if (!file) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      fileName: file.name,
+      mimeType: file.type,
+      base64: reader.result.split(',')[1]
+    });
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('intakeForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const statusEl = document.getElementById('statusMsg');
+  statusEl.textContent = 'Submitting...';
+  statusEl.className = 'status-msg';
+
+  const isSample = document.querySelector('input[name=submissionType]:checked').value.indexOf('Sample') === 0;
+
+  const files = [];
+  if (isSample) {
+    const f = await fileToBase64(document.getElementById('sampleFile'));
+    if (f) files.push(f);
+  } else {
+    const f = await fileToBase64(document.getElementById('fullFile'));
+    if (f) files.push(f);
+  }
+
+  const payload = {
+    password: document.getElementById('password').value,
+    submissionType: document.querySelector('input[name=submissionType]:checked').value,
+    companyName: document.getElementById('companyName').value,
+    contactName: document.getElementById('contactName').value,
+    contactEmail: document.getElementById('contactEmail').value,
+    phone: document.getElementById('phone').value,
+    equipment: isSample ? document.getElementById('equipment').value : '',
+    mediaPreference: isSample ? document.getElementById('mediaPreference').value : '',
+    sendingPaperSample: isSample
+      ? document.getElementById('sendingPaperSampleShort').value
+      : document.getElementById('sendingPaperSample').value,
+    jobName: document.getElementById('jobName') ? document.getElementById('jobName').value : '',
+    quantity: document.getElementById('quantity') ? document.getElementById('quantity').value : '',
+    finishedSize: document.getElementById('finishedSize') ? document.getElementById('finishedSize').value : '',
+    sides: document.getElementById('sides') ? document.getElementById('sides').value : '',
+    stockBrand: isSample ? document.getElementById('stockBrandSample').value : document.getElementById('stockBrand').value,
+    stockDescription: isSample ? document.getElementById('stockDescriptionSample').value : document.getElementById('stockDescription').value,
+    stockWeight: isSample ? document.getElementById('stockWeightSample').value : document.getElementById('stockWeight').value,
+    stockSize: isSample ? document.getElementById('stockSizeSample').value : document.getElementById('stockSize').value,
+    stockColor: isSample ? document.getElementById('stockColorSample').value : document.getElementById('stockColor').value,
+    stockType: isSample ? document.getElementById('stockTypeSample').value : document.getElementById('stockType').value,
+    grainDirection: isSample ? document.getElementById('grainDirectionSample').value : document.getElementById('grainDirection').value,
+    coated: isSample ? document.getElementById('coatedSample').value : document.getElementById('coated').value,
+    colorMode: document.getElementById('colorMode') ? document.getElementById('colorMode').value : '',
+    specialtyDescription: document.getElementById('specialtyDescription') ? document.getElementById('specialtyDescription').value : '',
+    finishing: document.getElementById('finishing') ? document.getElementById('finishing').value : '',
+    proofRequired: document.getElementById('proofRequired') ? document.getElementById('proofRequired').value : '',
+    neededBy: document.getElementById('neededBy') ? document.getElementById('neededBy').value : '',
+    fileNote: document.getElementById('fileNote') ? document.getElementById('fileNote').value : '',
+    additionalNotes: document.getElementById('additionalNotes') ? document.getElementById('additionalNotes').value : '',
+    files: files
+  };
+
+  try {
+    await fetch(WEB_APP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    statusEl.textContent = 'Submitted! You should receive a confirmation shortly.';
+    statusEl.className = 'status-msg success';
+    this.reset();
+    updateVisibility();
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong submitting the form. Please try again or contact us directly.';
+    statusEl.className = 'status-msg error';
+  }
+});
+</script>
+
+</body>
+</html>
