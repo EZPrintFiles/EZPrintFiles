@@ -191,7 +191,7 @@
       </div>
       <div class="field">
         <label>File Upload</label>
-        <input type="file" id="sampleFile">
+        <input type="file" id="sampleFile" multiple>
       </div>
       <div class="field">
         <label>Sending a physical paper sample too?</label>
@@ -433,7 +433,7 @@
         <span class="pill">Files</span>
         <div class="field">
           <label>File Upload</label>
-          <input type="file" id="fullFile">
+          <input type="file" id="fullFile" multiple>
         </div>
         <div class="field">
           <label>What does this file cover?</label>
@@ -500,10 +500,8 @@ document.getElementById('sendingPaperSampleShort').addEventListener('change', fu
   document.getElementById('sampleMediaPreference').classList.toggle('hidden', sendingSample);
 });
 
-function fileToBase64(fileInput) {
+function fileToBase64(file) {
   return new Promise((resolve) => {
-    const file = fileInput.files[0];
-    if (!file) { resolve(null); return; }
     const reader = new FileReader();
     reader.onload = () => resolve({
       fileName: file.name,
@@ -514,6 +512,52 @@ function fileToBase64(fileInput) {
   });
 }
 
+async function filesToBase64Array(fileInput) {
+  const files = Array.from(fileInput.files || []);
+  return Promise.all(files.map(fileToBase64));
+}
+
+// Checks the real result of a submission via a <script> tag request instead of
+// fetch — this bypasses the CORS restriction that makes the no-cors POST's
+// response unreadable, since script-tag loading isn't subject to the same policy.
+function checkStatusOnce(requestId) {
+  return new Promise((resolve) => {
+    const cbName = 'cb_' + requestId;
+    const script = document.createElement('script');
+    let settled = false;
+
+    window[cbName] = function (result) {
+      if (settled) return;
+      settled = true;
+      delete window[cbName];
+      script.remove();
+      resolve(result);
+    };
+
+    script.onerror = function () {
+      if (settled) return;
+      settled = true;
+      delete window[cbName];
+      script.remove();
+      resolve({ status: 'error' });
+    };
+
+    script.src = WEB_APP_URL + '?checkId=' + encodeURIComponent(requestId) + '&callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+
+async function pollForResult(requestId, attempts, delayMs) {
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, delayMs));
+    const result = await checkStatusOnce(requestId);
+    if (result && result.status && result.status !== 'pending') {
+      return result;
+    }
+  }
+  return { status: 'unknown' };
+}
+
 document.getElementById('intakeForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const statusEl = document.getElementById('statusMsg');
@@ -522,16 +566,14 @@ document.getElementById('intakeForm').addEventListener('submit', async function 
 
   const isSample = document.querySelector('input[name=submissionType]:checked').value.indexOf('Sample') === 0;
 
-  const files = [];
-  if (isSample) {
-    const f = await fileToBase64(document.getElementById('sampleFile'));
-    if (f) files.push(f);
-  } else {
-    const f = await fileToBase64(document.getElementById('fullFile'));
-    if (f) files.push(f);
-  }
+  const files = isSample
+    ? await filesToBase64Array(document.getElementById('sampleFile'))
+    : await filesToBase64Array(document.getElementById('fullFile'));
+
+  const requestId = 'r' + Date.now() + Math.random().toString(36).slice(2);
 
   const payload = {
+    requestId: requestId,
     password: document.getElementById('password').value,
     submissionType: document.querySelector('input[name=submissionType]:checked').value,
     companyName: document.getElementById('companyName').value,
@@ -573,10 +615,24 @@ document.getElementById('intakeForm').addEventListener('submit', async function 
       body: JSON.stringify(payload)
     });
 
-    statusEl.textContent = 'Submitted! You should receive a confirmation shortly.';
-    statusEl.className = 'status-msg success';
-    this.reset();
-    updateVisibility();
+    statusEl.textContent = 'Checking submission...';
+    const result = await pollForResult(requestId, 8, 1200);
+
+    if (result.status === 'success') {
+      statusEl.textContent = 'Submitted! Job Number ' + result.jobNumber + '. You should receive a confirmation shortly.';
+      statusEl.className = 'status-msg success';
+      this.reset();
+      updateVisibility();
+    } else if (result.status === 'unauthorized') {
+      statusEl.textContent = 'Password is incorrect, please contact us for access.';
+      statusEl.className = 'status-msg error';
+    } else if (result.status === 'error') {
+      statusEl.textContent = 'Something went wrong processing your submission. Please try again or contact us directly.';
+      statusEl.className = 'status-msg error';
+    } else {
+      statusEl.textContent = 'We could not confirm your submission went through. Please try again or contact us directly before assuming it was received.';
+      statusEl.className = 'status-msg error';
+    }
   } catch (err) {
     statusEl.textContent = 'Something went wrong submitting the form. Please try again or contact us directly.';
     statusEl.className = 'status-msg error';
