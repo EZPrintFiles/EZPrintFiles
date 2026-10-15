@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Print Request - EZ Overflow</title>
+<title>Print Request — EZ Overflow</title>
 <style>
   :root{
     --navy: #0c2d55;
@@ -124,6 +124,29 @@
   .status-msg{ text-align:center; font-size: 13px; color: var(--muted); margin-top: 14px; min-height: 18px; }
   .status-msg.error{ color: #b00020; }
   .status-msg.success{ color: #1a7d1a; }
+
+  /* ---- File list, drop zone, size cap, link fallback ---- */
+  .label-like{ display:block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .dropzone{ border: 2px dashed var(--line); border-radius: 8px; padding: 20px 16px; text-align: center; cursor: pointer; background: #fff; transition: border-color .15s, background .15s; }
+  .dropzone:hover, .dropzone:focus, .dropzone.dragover{ border-color: var(--navy); background: #f4f6f8; outline: none; }
+  .dropzone:focus-visible{ box-shadow: 0 0 0 3px rgba(12,45,85,0.15); }
+  .dz-main{ font-size: 14px; font-weight: 600; color: var(--ink); }
+  .dz-link{ color: var(--navy); text-decoration: underline; }
+  .dz-hint{ font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .filelist{ list-style: none; margin: 12px 0 0; padding: 0; }
+  .filerow{ display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .filerow:first-child{ border-top: none; }
+  .fname{ font-size: 13px; font-weight: 600; word-break: break-all; }
+  .fsize{ font-size: 12px; color: var(--muted); font-weight: 400; display: block; }
+  .filerow input[type="text"]{ padding: 7px 9px; font-size: 13px; }
+  .fremove{ background: none; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 12px; padding: 6px 10px; cursor: pointer; color: var(--ink); }
+  .fremove:hover{ border-color: #b00020; color: #b00020; }
+  @media (max-width: 480px){ .filerow{ grid-template-columns: 1fr auto; } .filerow .fnote{ grid-column: 1 / -1; order: 3; } }
+  .filesummary{ font-size: 12.5px; color: var(--muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .filesummary.over{ color: #b00020; font-weight: 600; }
+  .filewarn{ font-size: 12.5px; color: #8a5a00; margin-top: 8px; }
+  .linkbox{ margin-top: 12px; }
+  .btn:disabled{ opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -146,13 +169,13 @@
       <span class="pill">Get Started</span>
       <div class="row-2">
         <div class="field">
-          <label>Access Password<span class="req">*</span></label>
+          <label for="password">Access Password<span class="req">*</span></label>
           <div class="hint">Provided to you by EZ Overflow</div>
-          <input type="password" id="password" required>
+          <input type="password" id="password" autocomplete="off" required>
         </div>
         <div class="field">
-          <label>Production or Samples?<span class="req">*</span></label>
-          <div class="choice-group">
+          <span class="label-like" id="typeLabel">Production or Samples?<span class="req">*</span></span>
+          <div class="choice-group" role="radiogroup" aria-labelledby="typeLabel">
             <label class="choice"><input type="radio" name="submissionType" value="Print Job — Full Order" checked> Production Printing Request</label>
             <label class="choice"><input type="radio" name="submissionType" value="Sample Files — Prospective Customer"> Sample Files (for a specific printer)</label>
           </div>
@@ -165,22 +188,22 @@
       <span class="pill">Contact Info</span>
       <div class="row-2">
         <div class="field">
-          <label>Company Name<span class="req">*</span></label>
-          <input type="text" id="companyName" required>
+          <label for="companyName">Company Name<span class="req">*</span></label>
+          <input type="text" id="companyName" autocomplete="organization" required>
         </div>
         <div class="field">
-          <label>Contact Name<span class="req">*</span></label>
-          <input type="text" id="contactName" required>
+          <label for="contactName">Contact Name<span class="req">*</span></label>
+          <input type="text" id="contactName" autocomplete="name" required>
         </div>
       </div>
       <div class="row-2">
         <div class="field">
-          <label>Contact Email<span class="req">*</span></label>
-          <input type="email" id="contactEmail" required>
+          <label for="contactEmail">Contact Email<span class="req">*</span></label>
+          <input type="email" id="contactEmail" autocomplete="email" required>
         </div>
         <div class="field">
-          <label>Phone</label>
-          <input type="tel" id="phone">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" autocomplete="tel">
         </div>
       </div>
     </div>
@@ -189,7 +212,7 @@
     <div class="section hidden" id="sampleSection">
       <span class="pill">Sample Details</span>
       <div class="field">
-        <label>Which equipment is this for?</label>
+        <label for="equipment">Which equipment is this for?</label>
         <div class="hint">Optional</div>
         <select id="equipment">
           <option value="">-- select --</option>
@@ -202,11 +225,11 @@
         </select>
       </div>
       <div class="field">
-        <label>File Upload</label>
-        <input type="file" id="sampleFile" multiple>
+        <span class="label-like">Files</span>
+        <div id="sampleFilesWidget"></div>
       </div>
       <div class="field">
-        <label>Sending a physical paper sample too?</label>
+        <label for="sendingPaperSampleShort">Sending a physical paper sample too?</label>
         <select id="sendingPaperSampleShort">
           <option value="No">No</option>
           <option value="Yes">Yes</option>
@@ -219,27 +242,27 @@
         <div class="hint" style="margin-top:14px;">Tell us about the paper stock so we print your test correctly</div>
         <div class="row-2">
           <div class="field">
-            <label>Brand / Mill</label>
+            <label for="stockBrandSample">Brand / Mill</label>
             <input type="text" id="stockBrandSample">
           </div>
           <div class="field">
-            <label>Weight</label>
+            <label for="stockWeightSample">Weight</label>
             <input type="text" id="stockWeightSample" placeholder="e.g. 80lb text, 120gsm">
           </div>
         </div>
         <div class="row-2">
           <div class="field">
-            <label>Size</label>
+            <label for="stockSizeSample">Size</label>
             <input type="text" id="stockSizeSample">
           </div>
           <div class="field">
-            <label>Color</label>
+            <label for="stockColorSample">Color</label>
             <input type="text" id="stockColorSample">
           </div>
         </div>
         <div class="row-2">
           <div class="field">
-            <label>Stock Type</label>
+            <label for="stockTypeSample">Stock Type</label>
             <select id="stockTypeSample">
               <option>Bond</option>
               <option>Text</option>
@@ -252,7 +275,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Grain Direction</label>
+            <label for="grainDirectionSample">Grain Direction</label>
             <select id="grainDirectionSample">
               <option>Grain Long</option>
               <option>Grain Short</option>
@@ -261,7 +284,7 @@
           </div>
         </div>
         <div class="field">
-          <label>Coated or Uncoated?</label>
+          <label for="coatedSample">Coated or Uncoated?</label>
           <select id="coatedSample">
             <option>Uncoated</option>
             <option>Coated</option>
@@ -272,12 +295,12 @@
           If this sample is for the AstroNova AJ800 or DGI Presto, note: we can't print on coated stock with inkjet unless it's been pre-treated — which we don't currently offer. If you're not sure, mark "Not Sure" above and we'll follow up.
         </div>
         <div class="field">
-          <label>Full Description</label>
+          <label for="stockDescriptionSample">Full Description</label>
           <textarea id="stockDescriptionSample"></textarea>
         </div>
       </div>
       <div id="sampleMediaPreference" class="field">
-        <label>What would you like this printed on?</label>
+        <label for="mediaPreference">What would you like this printed on?</label>
         <div class="hint">Since you're not sending physical stock, briefly describe what you'd like used — e.g. "your standard white cover stock," "something with a metallic finish," or "no preference, your recommendation"</div>
         <textarea id="mediaPreference"></textarea>
       </div>
@@ -289,16 +312,16 @@
       <div class="section">
         <span class="pill">Job Details</span>
         <div class="field">
-          <label>Job Name / Description</label>
+          <label for="jobName">Job Name / Description</label>
           <input type="text" id="jobName">
         </div>
         <div class="row-2">
           <div class="field">
-            <label>Quantity</label>
+            <label for="quantity">Quantity</label>
             <input type="number" id="quantity" min="1">
           </div>
           <div class="field">
-            <label>Sides</label>
+            <label for="sides">Sides</label>
             <select id="sides">
               <option>Single-sided</option>
               <option>Double-sided</option>
@@ -306,7 +329,7 @@
           </div>
         </div>
         <div class="field">
-          <label>Finished Size</label>
+          <label for="finishedSize">Finished Size</label>
           <select id="finishedSize">
             <option>8.5" x 11"</option>
             <option>8.5" x 14"</option>
@@ -326,27 +349,27 @@
         <div class="hint">Customer-supplied — EZ Overflow doesn't keep house stock on hand</div>
         <div class="row-2">
           <div class="field">
-            <label>Brand / Mill</label>
+            <label for="stockBrand">Brand / Mill</label>
             <input type="text" id="stockBrand">
           </div>
           <div class="field">
-            <label>Weight</label>
+            <label for="stockWeight">Weight</label>
             <input type="text" id="stockWeight" placeholder="e.g. 80lb text, 120gsm">
           </div>
         </div>
         <div class="row-2">
           <div class="field">
-            <label>Size</label>
+            <label for="stockSize">Size</label>
             <input type="text" id="stockSize">
           </div>
           <div class="field">
-            <label>Color</label>
+            <label for="stockColor">Color</label>
             <input type="text" id="stockColor">
           </div>
         </div>
         <div class="row-2">
           <div class="field">
-            <label>Stock Type</label>
+            <label for="stockType">Stock Type</label>
             <select id="stockType">
               <option>Bond</option>
               <option>Text</option>
@@ -359,7 +382,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Grain Direction</label>
+            <label for="grainDirection">Grain Direction</label>
             <select id="grainDirection">
               <option>Grain Long</option>
               <option>Grain Short</option>
@@ -368,7 +391,7 @@
           </div>
         </div>
         <div class="field">
-          <label>Coated or Uncoated?</label>
+          <label for="coated">Coated or Uncoated?</label>
           <select id="coated">
             <option>Uncoated</option>
             <option>Coated</option>
@@ -376,11 +399,11 @@
           </select>
         </div>
         <div class="field">
-          <label>Full Description</label>
+          <label for="stockDescription">Full Description</label>
           <textarea id="stockDescription"></textarea>
         </div>
         <div class="field">
-          <label>Sending a physical paper sample?</label>
+          <label for="sendingPaperSample">Sending a physical paper sample?</label>
           <select id="sendingPaperSample">
             <option value="No">No</option>
             <option value="Yes">Yes</option>
@@ -395,7 +418,7 @@
         <span class="pill">Color &amp; Finishing</span>
         <div class="row-2">
           <div class="field">
-            <label>Color Mode</label>
+            <label for="colorMode">Color Mode</label>
             <select id="colorMode">
               <option>Full Color CMYK</option>
               <option>Black & White</option>
@@ -403,7 +426,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Finishing</label>
+            <label for="finishing">Finishing</label>
             <select id="finishing">
               <option>None</option>
               <option>Staple (corner/side)</option>
@@ -415,7 +438,7 @@
           </div>
         </div>
         <div id="specialtyBlock" class="field hidden">
-          <label>Describe the specialty effect you'd like</label>
+          <label for="specialtyDescription">Describe the specialty effect you'd like</label>
           <div class="hint">e.g. silver logo, white underprint on dark stock</div>
           <textarea id="specialtyDescription"></textarea>
         </div>
@@ -425,14 +448,14 @@
         <span class="pill">Timing</span>
         <div class="row-2">
           <div class="field">
-            <label>Proof Required?</label>
+            <label for="proofRequired">Proof Required?</label>
             <select id="proofRequired">
               <option value="No">No</option>
               <option value="Yes">Yes</option>
             </select>
           </div>
           <div class="field">
-            <label>Needed By</label>
+            <label for="neededBy">Needed By</label>
             <input type="date" id="neededBy">
           </div>
         </div>
@@ -444,29 +467,24 @@
       <div class="section">
         <span class="pill">Files</span>
         <div class="field">
-          <label>File Upload</label>
-          <input type="file" id="fullFile" multiple>
-        </div>
-        <div class="field">
-          <label>What does this file cover?</label>
-          <div class="hint">Optional</div>
-          <input type="text" id="fileNote">
+          <span class="label-like">Upload your files</span>
+          <div id="fullFilesWidget"></div>
         </div>
       </div>
 
       <div class="section">
         <span class="pill">Notes</span>
         <div class="field">
-          <textarea id="additionalNotes" rows="3"></textarea>
+          <textarea id="additionalNotes" rows="3" aria-label="Additional notes"></textarea>
         </div>
       </div>
 
     </div>
 
     <div style="text-align:center; margin-top:24px;">
-      <button type="submit" class="btn">Submit</button>
+      <button type="submit" class="btn" id="submitBtn">Submit</button>
     </div>
-    <div id="statusMsg" class="status-msg"></div>
+    <div id="statusMsg" class="status-msg" role="status" aria-live="polite"></div>
 
   </form>
 
@@ -519,21 +537,212 @@ document.getElementById('sendingPaperSampleShort').addEventListener('change', fu
   document.getElementById('sampleMediaPreference').classList.toggle('hidden', sendingSample);
 });
 
-function fileToBase64(file) {
-  return new Promise((resolve) => {
+// ===== File lists (one per path), 25 MB total cap, link fallback =====
+// The cap applies to the total of all files because they travel in a single request.
+// 25 MB is a conservative placeholder: a single 24.9 MB file was tested and passed, a 44.5 MB file hung.
+const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
+const MAX_TOTAL_LABEL = '25 MB';
+const MAX_LINKS = 10;
+
+function formatSize(bytes) {
+  if (bytes < 1024 * 1024) { return Math.max(1, Math.round(bytes / 1024)) + ' KB'; }
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function parseLinks(raw) {
+  const valid = [], invalid = [];
+  String(raw || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).forEach(function (l) {
+    if (/^https?:\/\/\S+$/i.test(l) && l.length <= 500) { valid.push(l); } else { invalid.push(l); }
+  });
+  return { valid: valid, invalid: invalid };
+}
+
+function clock(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function readFile(file, note) {
+  return new Promise(function (resolve, reject) {
     const reader = new FileReader();
-    reader.onload = () => resolve({
-      fileName: file.name,
-      mimeType: file.type,
-      base64: reader.result.split(',')[1]
-    });
+    reader.onload = function () {
+      resolve({
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        base64: String(reader.result).split(',')[1] || '',
+        note: (note || '').trim()
+      });
+    };
+    reader.onerror = function () { reject(reader.error || new Error('Could not read ' + file.name)); };
     reader.readAsDataURL(file);
   });
 }
 
-async function filesToBase64Array(fileInput) {
-  const files = Array.from(fileInput.files || []);
-  return Promise.all(files.map(fileToBase64));
+function createFileManager(rootId, idPrefix) {
+  const root = document.getElementById(rootId);
+  root.innerHTML =
+    '<div class="dropzone" tabindex="0" role="button" aria-label="Add files. Press Enter to choose files, or drag files here.">' +
+      '<div class="dz-main">Drag files here or <span class="dz-link">choose files</span></div>' +
+      '<div class="dz-hint">You can add files from more than one folder. Add as many times as you need.</div>' +
+      '<input type="file" multiple hidden aria-label="Choose files to upload">' +
+    '</div>' +
+    '<div class="filewarn hidden" role="alert"></div>' +
+    '<ul class="filelist"></ul>' +
+    '<div class="filesummary"></div>' +
+    '<div class="boundary-note gold overcap hidden"></div>' +
+    '<div class="field linkbox hidden">' +
+      '<label for="' + idPrefix + 'Links">Share link for large files</label>' +
+      '<div class="hint">Paste a link (Google Drive, Dropbox, WeTransfer, OneDrive), one per line. Set it to "anyone with the link can view" and keep it active until we confirm your files arrived.</div>' +
+      '<textarea id="' + idPrefix + 'Links" rows="3" placeholder="https://..."></textarea>' +
+    '</div>';
+
+  const zone = root.querySelector('.dropzone');
+  const input = root.querySelector('input[type=file]');
+  const warn = root.querySelector('.filewarn');
+  const list = root.querySelector('.filelist');
+  const summary = root.querySelector('.filesummary');
+  const over = root.querySelector('.overcap');
+  const linkbox = root.querySelector('.linkbox');
+  const links = root.querySelector('textarea');
+
+  let items = [];
+  let seq = 0;
+  let linksShown = false;   // once the cap has been hit, the link box stays available
+
+  const keyOf = function (f) { return f.name + '|' + f.size + '|' + f.lastModified; };
+  const total = function () { return items.reduce(function (n, it) { return n + it.file.size; }, 0); };
+  const showWarn = function (msg) { warn.textContent = msg; warn.classList.toggle('hidden', !msg); };
+
+  function render() {
+    list.textContent = '';
+    items.forEach(function (it) {
+      const li = document.createElement('li');
+      li.className = 'filerow';
+
+      const nameBox = document.createElement('div');
+      const nm = document.createElement('span'); nm.className = 'fname'; nm.textContent = it.file.name;
+      const sz = document.createElement('span'); sz.className = 'fsize'; sz.textContent = formatSize(it.file.size);
+      nameBox.appendChild(nm); nameBox.appendChild(sz);
+
+      const note = document.createElement('input');
+      note.type = 'text'; note.className = 'fnote'; note.maxLength = 200; note.value = it.note;
+      note.placeholder = 'What is this file used for? (optional)';
+      note.setAttribute('aria-label', 'What is ' + it.file.name + ' used for? (optional)');
+      note.addEventListener('input', function () { it.note = note.value; });
+
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'fremove'; rm.textContent = 'Remove';
+      rm.setAttribute('aria-label', 'Remove ' + it.file.name);
+      rm.addEventListener('click', function () {
+        items = items.filter(function (x) { return x.id !== it.id; });
+        showWarn('');
+        render();
+      });
+
+      li.appendChild(nameBox); li.appendChild(note); li.appendChild(rm);
+      list.appendChild(li);
+    });
+
+    const t = total();
+    summary.textContent = items.length
+      ? items.length + (items.length === 1 ? ' file' : ' files') + ' \u00b7 ' + formatSize(t) + ' of ' + MAX_TOTAL_LABEL
+      : '';
+    summary.classList.toggle('over', t > MAX_TOTAL_BYTES);
+    if (t > MAX_TOTAL_BYTES) {
+      linksShown = true;
+      over.textContent = 'Your files total ' + formatSize(t) + ', which is over the ' + MAX_TOTAL_LABEL +
+        ' limit for one submission. Remove files until you are under the limit, and paste a share link below for the large ones.';
+    }
+    over.classList.toggle('hidden', t <= MAX_TOTAL_BYTES);
+    linkbox.classList.toggle('hidden', !linksShown);
+  }
+
+  function addFiles(fileArray, skippedFolders) {
+    const have = new Set(items.map(function (it) { return keyOf(it.file); }));
+    const msgs = [];
+    const empties = [];
+    let dupes = 0;
+    Array.from(fileArray || []).forEach(function (f) {
+      if (!f) { return; }
+      if (f.size === 0) { empties.push(f.name); return; }
+      if (have.has(keyOf(f))) { dupes++; return; }
+      have.add(keyOf(f));
+      items.push({ id: ++seq, file: f, note: '' });
+    });
+    if (skippedFolders) {
+      msgs.push(skippedFolders + (skippedFolders === 1 ? ' folder was' : ' folders were') +
+        ' skipped. Folders cannot be uploaded; add the files inside instead.');
+    }
+    if (empties.length) { msgs.push('Skipped an empty file: ' + empties.join(', ') + '.'); }
+    if (dupes) { msgs.push(dupes + (dupes === 1 ? ' file was' : ' files were') + ' already added.'); }
+    showWarn(msgs.join(' '));
+    render();
+  }
+
+  zone.addEventListener('click', function (e) { if (e.target !== input) { input.click(); } });
+  zone.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+  });
+  input.addEventListener('change', function () {
+    addFiles(input.files);   // copies the File objects before the picker is cleared
+    input.value = '';        // lets the customer pick the same file again later
+  });
+  ['dragenter', 'dragover'].forEach(function (name) {
+    zone.addEventListener(name, function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+  });
+  zone.addEventListener('dragleave', function (e) { e.preventDefault(); zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const dt = e.dataTransfer;
+    if (!dt) { return; }
+    const files = [];
+    let folders = 0;
+    if (dt.items && dt.items.length) {
+      Array.from(dt.items).forEach(function (item) {
+        if (item.kind !== 'file') { return; }
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) { folders++; return; }
+        const f = item.getAsFile();
+        if (f) { files.push(f); }
+      });
+    } else {
+      Array.from(dt.files || []).forEach(function (f) { files.push(f); });
+    }
+    addFiles(files, folders);
+  });
+
+  return {
+    addFiles: addFiles,
+    total: total,
+    isOver: function () { return total() > MAX_TOTAL_BYTES; },
+    getItems: function () { return items; },
+    getLinks: function () { return parseLinks(links.value); },
+    toPayloadFiles: async function (onProgress) {
+      const out = [];
+      for (let i = 0; i < items.length; i++) {   // one at a time keeps memory use lower
+        if (onProgress) { onProgress(i + 1, items.length); }
+        out.push(await readFile(items[i].file, items[i].note));
+      }
+      return out;
+    },
+    reset: function () { items = []; linksShown = false; links.value = ''; showWarn(''); render(); }
+  };
+}
+
+const fullFiles = createFileManager('fullFilesWidget', 'full');
+const sampleFiles = createFileManager('sampleFilesWidget', 'sample');
+
+// A file dropped outside the drop zone would make the browser open it and lose the form.
+window.addEventListener('dragover', function (e) { e.preventDefault(); });
+window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+// Re-applies every show/hide rule. Needed after form.reset(), which changes values without firing change events.
+function syncDependentFields() {
+  ['colorMode', 'proofRequired', 'sendingPaperSample', 'sendingPaperSampleShort'].forEach(function (id) {
+    document.getElementById(id).dispatchEvent(new Event('change'));
+  });
+  updateVisibility();
 }
 
 // Checks the real result of a submission via a <script> tag request instead of
@@ -577,56 +786,97 @@ async function pollForResult(requestId, attempts, delayMs) {
   return { status: 'unknown' };
 }
 
-document.getElementById('intakeForm').addEventListener('submit', async function (e) {
+const form = document.getElementById('intakeForm');
+const submitBtn = document.getElementById('submitBtn');
+const statusEl = document.getElementById('statusMsg');
+let submitting = false;
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = 'status-msg' + (cls ? ' ' + cls : '');
+}
+
+form.addEventListener('submit', async function (e) {
   e.preventDefault();
-  const statusEl = document.getElementById('statusMsg');
-  statusEl.textContent = 'Submitting...';
-  statusEl.className = 'status-msg';
+  if (submitting) { return; }   // ignore a second click while the first submission is running
 
   const isSample = document.querySelector('input[name=submissionType]:checked').value.indexOf('Sample') === 0;
+  const mgr = isSample ? sampleFiles : fullFiles;
 
-  const files = isSample
-    ? await filesToBase64Array(document.getElementById('sampleFile'))
-    : await filesToBase64Array(document.getElementById('fullFile'));
+  if (mgr.isOver()) {
+    setStatus('Your files are over the ' + MAX_TOTAL_LABEL + ' limit. Remove files, and paste a share link for the large ones.', 'error');
+    return;
+  }
+  const linkInfo = mgr.getLinks();
+  if (linkInfo.invalid.length) {
+    setStatus('These links do not look right: ' + linkInfo.invalid.join(', ') + '. Links must start with http:// or https://.', 'error');
+    return;
+  }
+  if (linkInfo.valid.length > MAX_LINKS) {
+    setStatus('Please paste no more than ' + MAX_LINKS + ' links.', 'error');
+    return;
+  }
 
-  const requestId = 'r' + Date.now() + Math.random().toString(36).slice(2);
-
-  const payload = {
-    requestId: requestId,
-    password: document.getElementById('password').value,
-    submissionType: document.querySelector('input[name=submissionType]:checked').value,
-    companyName: document.getElementById('companyName').value,
-    contactName: document.getElementById('contactName').value,
-    contactEmail: document.getElementById('contactEmail').value,
-    phone: document.getElementById('phone').value,
-    equipment: isSample ? document.getElementById('equipment').value : '',
-    mediaPreference: isSample ? document.getElementById('mediaPreference').value : '',
-    sendingPaperSample: isSample
-      ? document.getElementById('sendingPaperSampleShort').value
-      : document.getElementById('sendingPaperSample').value,
-    jobName: document.getElementById('jobName') ? document.getElementById('jobName').value : '',
-    quantity: document.getElementById('quantity') ? document.getElementById('quantity').value : '',
-    finishedSize: document.getElementById('finishedSize') ? document.getElementById('finishedSize').value : '',
-    sides: document.getElementById('sides') ? document.getElementById('sides').value : '',
-    stockBrand: isSample ? document.getElementById('stockBrandSample').value : document.getElementById('stockBrand').value,
-    stockDescription: isSample ? document.getElementById('stockDescriptionSample').value : document.getElementById('stockDescription').value,
-    stockWeight: isSample ? document.getElementById('stockWeightSample').value : document.getElementById('stockWeight').value,
-    stockSize: isSample ? document.getElementById('stockSizeSample').value : document.getElementById('stockSize').value,
-    stockColor: isSample ? document.getElementById('stockColorSample').value : document.getElementById('stockColor').value,
-    stockType: isSample ? document.getElementById('stockTypeSample').value : document.getElementById('stockType').value,
-    grainDirection: isSample ? document.getElementById('grainDirectionSample').value : document.getElementById('grainDirection').value,
-    coated: isSample ? document.getElementById('coatedSample').value : document.getElementById('coated').value,
-    colorMode: document.getElementById('colorMode') ? document.getElementById('colorMode').value : '',
-    specialtyDescription: document.getElementById('specialtyDescription') ? document.getElementById('specialtyDescription').value : '',
-    finishing: document.getElementById('finishing') ? document.getElementById('finishing').value : '',
-    proofRequired: document.getElementById('proofRequired') ? document.getElementById('proofRequired').value : '',
-    neededBy: document.getElementById('neededBy') ? document.getElementById('neededBy').value : '',
-    fileNote: document.getElementById('fileNote') ? document.getElementById('fileNote').value : '',
-    additionalNotes: document.getElementById('additionalNotes') ? document.getElementById('additionalNotes').value : '',
-    files: files
-  };
+  submitting = true;
+  submitBtn.disabled = true;
+  const t0 = Date.now();
+  let stage = 'Preparing your files...';
+  const paint = function () { setStatus(stage + ' ' + clock(Date.now() - t0) + '. Please keep this page open.', ''); };
+  paint();
+  const timer = setInterval(paint, 1000);
 
   try {
+    const files = await mgr.toPayloadFiles(function (i, n) { stage = 'Preparing file ' + i + ' of ' + n + '...'; paint(); });
+
+    const requestId = 'r' + Date.now() + Math.random().toString(36).slice(2);
+
+    // Hidden production-path fields still hold dropdown defaults, so only read them on a production submission.
+    const prod = function (id) { return isSample ? '' : document.getElementById(id).value; };
+    const sampleStock = isSample && document.getElementById('sendingPaperSampleShort').value === 'Yes';
+    const stock = function (fullId, sampleId) {
+      if (isSample) { return sampleStock ? document.getElementById(sampleId).value : ''; }
+      return document.getElementById(fullId).value;
+    };
+
+    const payload = {
+      requestId: requestId,
+      password: document.getElementById('password').value,
+      submissionType: document.querySelector('input[name=submissionType]:checked').value,
+      companyName: document.getElementById('companyName').value,
+      contactName: document.getElementById('contactName').value,
+      contactEmail: document.getElementById('contactEmail').value,
+      phone: document.getElementById('phone').value,
+      equipment: isSample ? document.getElementById('equipment').value : '',
+      mediaPreference: isSample ? document.getElementById('mediaPreference').value : '',
+      sendingPaperSample: isSample
+        ? document.getElementById('sendingPaperSampleShort').value
+        : document.getElementById('sendingPaperSample').value,
+      jobName: prod('jobName'),
+      quantity: prod('quantity'),
+      finishedSize: prod('finishedSize'),
+      sides: prod('sides'),
+      stockBrand: stock('stockBrand', 'stockBrandSample'),
+      stockDescription: stock('stockDescription', 'stockDescriptionSample'),
+      stockWeight: stock('stockWeight', 'stockWeightSample'),
+      stockSize: stock('stockSize', 'stockSizeSample'),
+      stockColor: stock('stockColor', 'stockColorSample'),
+      stockType: stock('stockType', 'stockTypeSample'),
+      grainDirection: stock('grainDirection', 'grainDirectionSample'),
+      coated: stock('coated', 'coatedSample'),
+      colorMode: prod('colorMode'),
+      specialtyDescription: prod('specialtyDescription'),
+      finishing: prod('finishing'),
+      proofRequired: prod('proofRequired'),
+      neededBy: prod('neededBy'),
+      additionalNotes: prod('additionalNotes'),
+      fileLinks: linkInfo.valid.join('\n'),
+      files: files
+    };
+
+    stage = files.length
+      ? 'Sending ' + files.length + (files.length === 1 ? ' file' : ' files') + ' (' + formatSize(mgr.total()) + ')...'
+      : 'Sending your request...';
+    paint();
     await fetch(WEB_APP_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -634,29 +884,33 @@ document.getElementById('intakeForm').addEventListener('submit', async function 
       body: JSON.stringify(payload)
     });
 
-    statusEl.textContent = 'Checking submission...';
-    const result = await pollForResult(requestId, 8, 1200);
+    stage = 'Checking submission...';
+    paint();
+    const result = await pollForResult(requestId, 15, 1200);
 
     if (result.status === 'success') {
-      statusEl.textContent = 'Submitted! Job Number ' + result.jobNumber + '. You should receive a confirmation shortly.';
-      statusEl.className = 'status-msg success';
-      this.reset();
-      updateVisibility();
+      setStatus('Submitted. Your job number is ' + result.jobNumber + '. Please keep it for your records.', 'success');
+      form.reset();
+      fullFiles.reset();
+      sampleFiles.reset();
+      syncDependentFields();
     } else if (result.status === 'unauthorized') {
-      statusEl.textContent = 'Password is incorrect, please contact us for access.';
-      statusEl.className = 'status-msg error';
+      setStatus('Password is incorrect, please contact us for access.', 'error');
     } else if (result.status === 'error') {
-      statusEl.textContent = 'Something went wrong processing your submission. Please try again or contact us directly.';
-      statusEl.className = 'status-msg error';
+      setStatus('Something went wrong processing your submission. Please try again or contact us directly.', 'error');
     } else {
-      statusEl.textContent = 'We could not confirm your submission went through. Please try again or contact us directly before assuming it was received.';
-      statusEl.className = 'status-msg error';
+      setStatus('We could not confirm your submission went through. Please try again or contact us directly before assuming it was received.', 'error');
     }
   } catch (err) {
-    statusEl.textContent = 'Something went wrong submitting the form. Please try again or contact us directly.';
-    statusEl.className = 'status-msg error';
+    setStatus('Something went wrong submitting the form. Please try again or contact us directly.', 'error');
+  } finally {
+    clearInterval(timer);
+    submitting = false;
+    submitBtn.disabled = false;
   }
 });
+
+syncDependentFields();
 </script>
 
 </body>
